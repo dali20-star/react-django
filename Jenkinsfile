@@ -48,19 +48,13 @@ pipeline {
 
     post {
         always {
-            node {
-                echo 'Fin du pipeline (post always)'
-            }
+            echo 'Fin du pipeline (post always)'
         }
         failure {
-            node {
-                echo 'Le pipeline a échoué.'
-            }
+            echo 'Le pipeline a échoué.'
         }
         success {
-            node {
-                echo 'Le pipeline a réussi.'
-            }
+            echo 'Le pipeline a réussi.'
         }
     }
 }
