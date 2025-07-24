@@ -1,0 +1,16 @@
+# Utilise une image Node.js officielle
+FROM node:18
+
+# Crée un répertoire de travail
+WORKDIR /app
+
+# Copie les fichiers dans le conteneur
+COPY frontend/package*.json ./
+RUN npm install
+COPY frontend/ .
+
+# Lance le serveur de développement React
+CMD ["npm", "start"]
+
+# Expose le port 3000
+EXPOSE 3000
