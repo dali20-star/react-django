@@ -2,34 +2,35 @@ pipeline {
     agent any
 
     environment {
-        DOCKER_BUILDKIT = '0' // 🔧 Désactivation explicite du BuildKit
+        DOCKER_BUILDKIT = '0'
     }
 
     stages {
         stage('Clone Repository') {
             steps {
-                // 🔧 Correction : spécification de la branche main
-                git branch: 'main', url: 'https://github.com/ahmed22-hub/react-django.git'
+                git 'https://github.com/ahmed22-hub/react-django.git'
             }
         }
 
         stage('SonarQube Analysis') {
             steps {
                 withSonarQubeEnv('SonarQubeServer') {
-                    bat """
+                    bat '''
                         C:/ProgramData/Jenkins/.jenkins/tools/hudson.plugins.sonar.SonarRunnerInstallation/SonarScanner/bin/sonar-scanner.bat ^
                         -Dsonar.projectKey=react-django ^
                         -Dsonar.sources=frontend ^
                         -Dsonar.host.url=http://localhost:9000 ^
-                        -Dsonar.login=%SONAR_TOKEN%
-                    """
+                        -Dsonar.token=%SONAR_TOKEN%
+                    '''
                 }
             }
         }
 
         stage('Docker Login') {
             steps {
-                bat 'echo %DOCKER_PASSWORD% | docker login -u %DOCKER_USERNAME% --password-stdin'
+                withCredentials([usernamePassword(credentialsId: 'dockerhub', usernameVariable: 'DOCKER_USERNAME', passwordVariable: 'DOCKER_PASSWORD')]) {
+                    bat 'echo %DOCKER_PASSWORD% | docker login -u %DOCKER_USERNAME% --password-stdin'
+                }
             }
         }
 
