@@ -1,12 +1,17 @@
 pipeline {
     agent any
 
+    tools {
+        sonarQube 'SonarScanner' // Ce nom doit correspondre à la config dans Jenkins (Global Tool Configuration)
+    }
+
     environment {
         DOCKER_CREDENTIALS = credentials('dockerhub')
         SONAR_TOKEN = credentials('sonarqube_token')
     }
 
     stages {
+
         stage('Clone Repository') {
             steps {
                 git branch: 'main',
@@ -16,13 +21,13 @@ pipeline {
 
         stage('SonarQube Analysis') {
             environment {
-                SONARQUBE_ENV = 'SonarQubeServer'
+                SONARQUBE_ENV = 'SonarQubeServer' // Ce nom doit correspondre à la config dans "Configure System"
             }
             steps {
                 withSonarQubeEnv('SonarQubeServer') {
                     bat '''
                     cd frontend
-                    sonar-scanner.bat ^
+                    sonar-scanner ^
                         -Dsonar.projectKey=react-django ^
                         -Dsonar.sources=. ^
                         -Dsonar.host.url=http://localhost:9000 ^
