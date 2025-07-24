@@ -1,10 +1,6 @@
 pipeline {
     agent any
 
-    tools {
-        sonarQube 'SonarScanner' // Ce nom doit correspondre à la config dans Jenkins (Global Tool Configuration)
-    }
-
     environment {
         DOCKER_CREDENTIALS = credentials('dockerhub')
         SONAR_TOKEN = credentials('sonarqube_token')
