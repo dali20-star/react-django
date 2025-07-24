@@ -16,17 +16,17 @@ pipeline {
 
         stage('SonarQube Analysis') {
             environment {
-                SONARQUBE_ENV = 'SonarQubeServer' // You must configure this name in Jenkins
+                SONARQUBE_ENV = 'SonarQubeServer'
             }
             steps {
                 withSonarQubeEnv('SonarQubeServer') {
-                    sh '''
+                    bat '''
                     cd frontend
-                    sonar-scanner \
-                        -Dsonar.projectKey=react-django \
-                        -Dsonar.sources=. \
-                        -Dsonar.host.url=http://sonarqube:9000 \
-                        -Dsonar.login=$SONAR_TOKEN
+                    sonar-scanner.bat ^
+                        -Dsonar.projectKey=react-django ^
+                        -Dsonar.sources=. ^
+                        -Dsonar.host.url=http://localhost:9000 ^
+                        -Dsonar.login=%SONAR_TOKEN%
                     '''
                 }
             }
@@ -34,33 +34,31 @@ pipeline {
 
         stage('Docker Login') {
             steps {
-                script {
-                    sh "echo ${DOCKER_CREDENTIALS_PSW} | docker login -u ${DOCKER_CREDENTIALS_USR} --password-stdin"
-                }
+                bat "echo %DOCKER_CREDENTIALS_PSW% | docker login -u %DOCKER_CREDENTIALS_USR% --password-stdin"
             }
         }
 
         stage('Build Docker Images') {
             steps {
-                sh '''
-                docker build -f Dockerfile.frontend -t ${DOCKER_CREDENTIALS_USR}/react-frontend:latest ./frontend
-                docker build -f Dockerfile.backend -t ${DOCKER_CREDENTIALS_USR}/django-backend:latest ./backend
+                bat '''
+                docker build -f Dockerfile.frontend -t %DOCKER_CREDENTIALS_USR%/react-frontend:latest frontend
+                docker build -f Dockerfile.backend -t %DOCKER_CREDENTIALS_USR%/django-backend:latest backend
                 '''
             }
         }
 
         stage('Push Docker Images') {
             steps {
-                sh '''
-                docker push ${DOCKER_CREDENTIALS_USR}/react-frontend:latest
-                docker push ${DOCKER_CREDENTIALS_USR}/django-backend:latest
+                bat '''
+                docker push %DOCKER_CREDENTIALS_USR%/react-frontend:latest
+                docker push %DOCKER_CREDENTIALS_USR%/django-backend:latest
                 '''
             }
         }
 
         stage('Deploy Application') {
             steps {
-                sh '''
+                bat '''
                 docker-compose down
                 docker-compose up -d
                 '''
