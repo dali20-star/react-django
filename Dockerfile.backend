@@ -1,0 +1,17 @@
+# Image Python pour Django
+FROM python:3.10
+
+# Définir le dossier de travail
+WORKDIR /app
+
+# Copier les fichiers
+COPY backend/requirements.txt .
+RUN pip install -r requirements.txt
+
+COPY backend/ .
+
+# Commande pour lancer le serveur Django
+CMD ["python", "manage.py", "runserver", "0.0.0.0:8000"]
+
+# Port exposé
+EXPOSE 8000
