@@ -2,7 +2,7 @@ pipeline {
     agent any
 
     environment {
-        DOCKER_HUB_CREDENTIALS = credentials('dockerhub') // Remplace par l'ID correct si besoin
+        DOCKER_HUB_CREDENTIALS = credentials('dockerhub') // ID Jenkins de tes identifiants Docker Hub
         BACKEND_IMAGE = 'ahmed22hub/backend-react-django'
         FRONTEND_IMAGE = 'ahmed22hub/frontend-react-django'
     }
@@ -17,9 +17,7 @@ pipeline {
         stage('Build Backend') {
             steps {
                 dir('backend') {
-                    script {
-                        docker.build(env.BACKEND_IMAGE)
-                    }
+                    sh "docker build -t $BACKEND_IMAGE ."
                 }
             }
         }
@@ -27,20 +25,19 @@ pipeline {
         stage('Build Frontend') {
             steps {
                 dir('frontend') {
-                    script {
-                        docker.build(env.FRONTEND_IMAGE)
-                    }
+                    sh "docker build -t $FRONTEND_IMAGE ."
                 }
             }
         }
 
         stage('Push to Docker Hub') {
             steps {
-                script {
-                    docker.withRegistry('https://index.docker.io/v1/', DOCKER_HUB_CREDENTIALS) {
-                        docker.image(env.BACKEND_IMAGE).push('latest')
-                        docker.image(env.FRONTEND_IMAGE).push('latest')
-                    }
+                withCredentials([usernamePassword(credentialsId: 'dockerhub', usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASS')]) {
+                    sh '''
+                        echo "$DOCKER_PASS" | docker login -u "$DOCKER_USER" --password-stdin
+                        docker push $BACKEND_IMAGE
+                        docker push $FRONTEND_IMAGE
+                    '''
                 }
             }
         }
