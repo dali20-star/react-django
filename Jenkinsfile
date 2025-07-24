@@ -6,8 +6,11 @@ pipeline {
         SONAR_TOKEN = credentials('sonarqube_token')
     }
 
-    stages {
+    tools {
+        sonarScanner 'SonarScanner' // Utilise le scanner installé automatiquement (nom exact d’après ta config Jenkins)
+    }
 
+    stages {
         stage('Clone Repository') {
             steps {
                 git branch: 'main',
@@ -17,7 +20,7 @@ pipeline {
 
         stage('SonarQube Analysis') {
             environment {
-                SONARQUBE_ENV = 'SonarQubeServer' // Ce nom doit correspondre à la config dans "Configure System"
+                SONARQUBE_ENV = 'SonarQubeServer'
             }
             steps {
                 withSonarQubeEnv('SonarQubeServer') {
@@ -35,7 +38,7 @@ pipeline {
 
         stage('Docker Login') {
             steps {
-                bat "echo %DOCKER_CREDENTIALS_PSW% | docker login -u %DOCKER_CREDENTIALS_USR% --password-stdin"
+                bat 'echo %DOCKER_CREDENTIALS_PSW% | docker login -u %DOCKER_CREDENTIALS_USR% --password-stdin'
             }
         }
 
