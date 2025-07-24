@@ -2,7 +2,7 @@ pipeline {
     agent any
 
     environment {
-        DOCKER_BUILDKIT = '0'               // 🔧 Désactivation explicite du BuildKit
+        DOCKER_BUILDKIT = '0' // Désactivation explicite de BuildKit
     }
 
     stages {
@@ -13,26 +13,30 @@ pipeline {
         }
 
         stage('SonarQube Analysis') {
-            environment {
-                SONAR_TOKEN = credentials('sonarqube-token')
-            }
             steps {
                 withSonarQubeEnv('SonarQubeServer') {
-                    bat """
-                        C:/ProgramData/Jenkins/.jenkins/tools/hudson.plugins.sonar.SonarRunnerInstallation/SonarScanner/bin/sonar-scanner.bat ^
-                        -Dsonar.projectKey=react-django ^
-                        -Dsonar.sources=frontend ^
-                        -Dsonar.host.url=http://localhost:9000 ^
-                        -Dsonar.token=%SONAR_TOKEN%
-                    """
+                    withCredentials([string(credentialsId: 'sonarqube-token', variable: 'SONAR_TOKEN')]) {
+                        bat """
+                            C:/ProgramData/Jenkins/.jenkins/tools/hudson.plugins.sonar.SonarRunnerInstallation/SonarScanner/bin/sonar-scanner.bat ^
+                            -Dsonar.projectKey=react-django ^
+                            -Dsonar.sources=frontend ^
+                            -Dsonar.host.url=http://localhost:9000 ^
+                            -Dsonar.token=%SONAR_TOKEN%
+                        """
+                    }
                 }
             }
         }
 
         stage('Docker Login') {
             steps {
-                withCredentials([usernamePassword(credentialsId: 'dockerhub-credentials', usernameVariable: 'DOCKER_USERNAME', passwordVariable: 'DOCKER_PASSWORD')]) {
-                    bat 'echo Logging in to Docker... & echo %DOCKER_PASSWORD% | docker login -u %DOCKER_USERNAME% --password-stdin'
+                withCredentials([
+                    string(credentialsId: 'dockerhub-username', variable: 'DOCKER_USERNAME'),
+                    string(credentialsId: 'dockerhub-password', variable: 'DOCKER_PASSWORD')
+                ]) {
+                    bat """
+                        echo %DOCKER_PASSWORD% | docker login -u %DOCKER_USERNAME% --password-stdin
+                    """
                 }
             }
         }
@@ -60,7 +64,7 @@ pipeline {
 
         stage('Deploy Application') {
             steps {
-                echo '🚀 Déploiement de l’application (à définir selon ton infra)'
+                echo '🚀 Déploiement de l’application (à définir selon ton infrastructure)'
             }
         }
     }
