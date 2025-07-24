@@ -2,56 +2,81 @@ pipeline {
     agent any
 
     environment {
-        DOCKER_HUB_CREDENTIALS = credentials('dockerhub')
-        BACKEND_IMAGE = 'ahmed22hub/backend-react-django'
-        FRONTEND_IMAGE = 'ahmed22hub/frontend-react-django'
+        // Using Jenkins credentials bindings properly
+        DOCKER_CREDENTIALS = credentials('dockerhub')
+        SONAR_TOKEN = credentials('sonarqube_token')
     }
 
     stages {
-        stage('Checkout') {
+
+        stage('Clone Repository') {
             steps {
-                git branch: 'main', url: 'https://github.com/ahmed22-hub/react-django.git'
+                git branch: 'main',
+                    url: 'https://github.com/ahmed22-hub/react-django.git'
             }
         }
 
-        stage('Build Backend') {
+        stage('SonarQube Analysis') {
+            environment {
+                SONARQUBE_ENV = 'SonarQubeServer'
+            }
             steps {
-                dir('backend') {
-                    bat "docker build -t %BACKEND_IMAGE% ."
+                withSonarQubeEnv('SonarQubeServer') {
+                    script {
+                        def scannerHome = tool name: 'SonarScanner', type: 'hudson.plugins.sonar.SonarRunnerInstallation'
+                        bat """
+                            \"${scannerHome}\\bin\\sonar-scanner.bat\" ^
+                                -Dsonar.projectKey=react-django ^
+                                -Dsonar.sources=frontend ^
+                                -Dsonar.host.url=http://localhost:9000 ^
+                                -Dsonar.login=%SONAR_TOKEN%
+                        """
+                    }
                 }
             }
         }
 
-        stage('Build Frontend') {
+        stage('Docker Login') {
             steps {
-                dir('frontend') {
-                    bat "docker build -t %FRONTEND_IMAGE% ."
-                }
+                // Note the variables provided by 'credentials' binding are _DOCKER_CREDENTIALS_USR_ and _DOCKER_CREDENTIALS_PSW_
+                bat 'echo %DOCKER_CREDENTIALS_PSW% | docker login -u %DOCKER_CREDENTIALS_USR% --password-stdin'
             }
         }
 
-        stage('Push to Docker Hub') {
+        stage('Build Docker Images') {
             steps {
-                withCredentials([usernamePassword(credentialsId: 'dockerhub', usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASS')]) {
-                    bat '''
-                        echo %DOCKER_PASS% | docker login -u %DOCKER_USER% --password-stdin
-                        docker push %BACKEND_IMAGE%
-                        docker push %FRONTEND_IMAGE%
-                    '''
-                }
+                bat '''
+                    docker build -f frontend/Dockerfile.frontend -t %DOCKER_CREDENTIALS_USR%/react-frontend:latest ./frontend
+                    docker build -f backend/Dockerfile.backend -t %DOCKER_CREDENTIALS_USR%/django-backend:latest ./backend
+                '''
+            }
+        }
+
+        stage('Push Docker Images') {
+            steps {
+                bat '''
+                    docker push %DOCKER_CREDENTIALS_USR%/react-frontend:latest
+                    docker push %DOCKER_CREDENTIALS_USR%/django-backend:latest
+                '''
+            }
+        }
+
+        stage('Deploy Application') {
+            steps {
+                bat '''
+                    docker-compose down
+                    docker-compose up -d
+                '''
             }
         }
     }
 
     post {
-        always {
-            echo 'Fin du pipeline (post always)'
-        }
         success {
-            echo 'Pipeline exécuté avec succès !'
+            echo 'Pipeline succeeded!'
         }
         failure {
-            echo 'Le pipeline a échoué.'
+            echo 'Pipeline failed.'
         }
     }
 }
