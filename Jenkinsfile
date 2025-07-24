@@ -2,10 +2,11 @@ pipeline {
     agent any
 
     environment {
-        DOCKER_BUILDKIT = '0' // Désactivation explicite de BuildKit
+        DOCKER_BUILDKIT = '0' // Désactiver BuildKit pour compatibilité maximale
     }
 
     stages {
+
         stage('Clone Repository') {
             steps {
                 git branch: 'main', url: 'https://github.com/ahmed22-hub/react-django.git'
@@ -28,9 +29,24 @@ pipeline {
             }
         }
 
+        stage('Clean Docker') {
+            steps {
+                bat '''
+                    docker system prune -af
+                    docker logout
+                '''
+            }
+        }
+
         stage('Docker Login') {
             steps {
-                withCredentials([usernamePassword(credentialsId: 'dockerhub', usernameVariable: 'DOCKER_USERNAME', passwordVariable: 'DOCKER_PASSWORD')]) {
+                withCredentials([
+                    usernamePassword(
+                        credentialsId: 'dockerhub',
+                        usernameVariable: 'DOCKER_USERNAME',
+                        passwordVariable: 'DOCKER_PASSWORD'
+                    )
+                ]) {
                     bat """
                         echo %DOCKER_PASSWORD% | docker login -u %DOCKER_USERNAME% --password-stdin
                     """
@@ -42,10 +58,10 @@ pipeline {
             steps {
                 bat """
                     echo Building Frontend...
-                    docker build -f frontend/Dockerfile.frontend -t ahmedmasmoudi047/react-frontend:latest ./frontend
+                    docker build --no-cache -f frontend/Dockerfile.frontend -t ahmedmasmoudi047/react-frontend:latest ./frontend
 
                     echo Building Backend...
-                    docker build -f backend/Dockerfile.backend -t ahmedmasmoudi047/django-backend:latest ./backend
+                    docker build --no-cache -f backend/Dockerfile.backend -t ahmedmasmoudi047/django-backend:latest ./backend
                 """
             }
         }
@@ -61,7 +77,7 @@ pipeline {
 
         stage('Deploy Application') {
             steps {
-                echo '🚀 Déploiement de l’application (à définir selon ton infrastructure)'
+                echo '🚀 Déploiement de l’application (à configurer selon ton infra : Docker Compose, K8s, SSH, etc.)'
             }
         }
     }
