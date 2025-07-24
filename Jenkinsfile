@@ -8,7 +8,8 @@ pipeline {
     stages {
         stage('Clone Repository') {
             steps {
-                git 'https://github.com/ahmed22-hub/react-django.git'
+                // 🔧 Correction : spécification de la branche main
+                git branch: 'main', url: 'https://github.com/ahmed22-hub/react-django.git'
             }
         }
 
