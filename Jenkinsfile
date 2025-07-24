@@ -6,11 +6,8 @@ pipeline {
         SONAR_TOKEN = credentials('sonarqube_token')
     }
 
-    tools {
-        sonarScanner 'SonarScanner' // Utilise le scanner installé automatiquement (nom exact d’après ta config Jenkins)
-    }
-
     stages {
+
         stage('Clone Repository') {
             steps {
                 git branch: 'main',
@@ -24,14 +21,17 @@ pipeline {
             }
             steps {
                 withSonarQubeEnv('SonarQubeServer') {
-                    bat '''
-                    cd frontend
-                    sonar-scanner ^
-                        -Dsonar.projectKey=react-django ^
-                        -Dsonar.sources=. ^
-                        -Dsonar.host.url=http://localhost:9000 ^
-                        -Dsonar.login=%SONAR_TOKEN%
-                    '''
+                    script {
+                        def scannerHome = tool name: 'SonarScanner', type: 'hudson.plugins.sonar.SonarRunnerInstallation'
+                        bat """
+                        cd frontend
+                        "${scannerHome}\\bin\\sonar-scanner.bat" ^
+                            -Dsonar.projectKey=react-django ^
+                            -Dsonar.sources=. ^
+                            -Dsonar.host.url=http://localhost:9000 ^
+                            -Dsonar.login=%SONAR_TOKEN%
+                        """
+                    }
                 }
             }
         }
