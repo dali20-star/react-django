@@ -24,12 +24,11 @@ pipeline {
                     script {
                         def scannerHome = tool name: 'SonarScanner', type: 'hudson.plugins.sonar.SonarRunnerInstallation'
                         bat """
-                        cd frontend
-                        "${scannerHome}\\bin\\sonar-scanner.bat" ^
-                            -Dsonar.projectKey=react-django ^
-                            -Dsonar.sources=. ^
-                            -Dsonar.host.url=http://localhost:9000 ^
-                            -Dsonar.login=%SONAR_TOKEN%
+                            "${scannerHome}\\bin\\sonar-scanner.bat" ^
+                                -Dsonar.projectKey=react-django ^
+                                -Dsonar.sources=frontend ^
+                                -Dsonar.host.url=http://localhost:9000 ^
+                                -Dsonar.token=%SONAR_TOKEN%
                         """
                     }
                 }
@@ -45,8 +44,8 @@ pipeline {
         stage('Build Docker Images') {
             steps {
                 bat '''
-                docker build -f Dockerfile.frontend -t %DOCKER_CREDENTIALS_USR%/react-frontend:latest frontend
-                docker build -f Dockerfile.backend -t %DOCKER_CREDENTIALS_USR%/django-backend:latest backend
+                    docker build -f frontend/Dockerfile.frontend -t %DOCKER_CREDENTIALS_USR%/react-frontend:latest .
+                    docker build -f backend/Dockerfile.backend -t %DOCKER_CREDENTIALS_USR%/django-backend:latest .
                 '''
             }
         }
@@ -54,8 +53,8 @@ pipeline {
         stage('Push Docker Images') {
             steps {
                 bat '''
-                docker push %DOCKER_CREDENTIALS_USR%/react-frontend:latest
-                docker push %DOCKER_CREDENTIALS_USR%/django-backend:latest
+                    docker push %DOCKER_CREDENTIALS_USR%/react-frontend:latest
+                    docker push %DOCKER_CREDENTIALS_USR%/django-backend:latest
                 '''
             }
         }
@@ -63,8 +62,8 @@ pipeline {
         stage('Deploy Application') {
             steps {
                 bat '''
-                docker-compose down
-                docker-compose up -d
+                    docker-compose down
+                    docker-compose up -d
                 '''
             }
         }
