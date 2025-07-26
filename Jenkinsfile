@@ -3,6 +3,7 @@ pipeline {
 
     environment {
         DOCKER_BUILDKIT = '0' // Désactiver BuildKit pour compatibilité maximale
+        IMAGE_TAG = "v${new Date().format('yyyyMMddHHmmss')}" // Tag unique par build
     }
 
     stages {
@@ -32,7 +33,7 @@ pipeline {
         stage('Clean Docker') {
             steps {
                 bat '''
-                    docker system prune -af
+                    docker system prune -af --volumes
                     docker logout
                 '''
             }
@@ -58,10 +59,10 @@ pipeline {
             steps {
                 bat """
                     echo Building Frontend...
-                    docker build --no-cache -f frontend/Dockerfile.frontend -t ahmedmasmoudi047/react-frontend:latest ./frontend
+                    docker build --no-cache -f frontend/Dockerfile.frontend -t ahmedmasmoudi047/react-frontend:%IMAGE_TAG% ./frontend
 
                     echo Building Backend...
-                    docker build --no-cache -f backend/Dockerfile.backend -t ahmedmasmoudi047/django-backend:latest ./backend
+                    docker build --no-cache -f backend/Dockerfile.backend -t ahmedmasmoudi047/django-backend:%IMAGE_TAG% ./backend
                 """
             }
         }
@@ -69,8 +70,8 @@ pipeline {
         stage('Push Docker Images') {
             steps {
                 bat """
-                    docker push ahmedmasmoudi047/react-frontend:latest
-                    docker push ahmedmasmoudi047/django-backend:latest
+                    docker push ahmedmasmoudi047/react-frontend:%IMAGE_TAG%
+                    docker push ahmedmasmoudi047/django-backend:%IMAGE_TAG%
                 """
             }
         }
