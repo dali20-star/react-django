@@ -4,36 +4,48 @@ import { Container, Form, Button, Alert, Spinner } from "react-bootstrap";
 import config from "../config";
 
 function FileUpload() {
+  const [testName, setTestName] = useState("");
+  const [status, setStatus] = useState("PASS");
+  const [details, setDetails] = useState("");
   const [file, setFile] = useState(null);
   const [message, setMessage] = useState("");
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState("");
 
-  const handleFileChange = (e) => {
-    setFile(e.target.files[0]);
-    setMessage("");
-    setError("");
-  };
-
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!file) {
-      setError("Please select a file before uploading.");
+    if (!file || !testName || !status) {
+      setError("All fields are required.");
       return;
     }
 
     const formData = new FormData();
-    formData.append("file", file);
+    formData.append("test_name", testName);
+    formData.append("status", status);
+    formData.append("details", details);
+    formData.append("test_file", file);
+
+    // 🔐 Clé corrigée pour que le backend la reconnaisse
+    formData.append("uploaded_by_id", 1);
 
     try {
       setUploading(true);
-      await axios.post(`${config.API_URL}upload/`, formData, {
+      await axios.post(`${config.API_URL}testresults/`, formData, {
         headers: { "Content-Type": "multipart/form-data" },
       });
-      setMessage("File uploaded successfully!");
+      setMessage("Test uploaded successfully!");
+      setTestName("");
+      setStatus("PASS");
+      setDetails("");
       setFile(null);
-    } catch {
-      setError("Upload failed. Please try again.");
+      setError("");
+    } catch (err) {
+      console.error("Upload error:", err);
+      if (err.response?.data) {
+        setError(`Upload failed: ${JSON.stringify(err.response.data)}`);
+      } else {
+        setError("Upload failed. Please try again.");
+      }
     } finally {
       setUploading(false);
     }
@@ -41,21 +53,62 @@ function FileUpload() {
 
   return (
     <Container className="mt-5">
-      <h3 className="mb-4">Upload Test File</h3>
+      <h3 className="mb-4">Upload New Test Result</h3>
       <Form onSubmit={handleSubmit}>
-        <Form.Group controlId="formFile" className="mb-3">
-          <Form.Label>Select file to upload</Form.Label>
-          <Form.Control type="file" onChange={handleFileChange} />
+        <Form.Group className="mb-3">
+          <Form.Label>Test Name</Form.Label>
+          <Form.Control
+            type="text"
+            value={testName}
+            onChange={(e) => setTestName(e.target.value)}
+            required
+          />
         </Form.Group>
-        {uploading ? (
-          <Button variant="primary" disabled>
-            <Spinner size="sm" animation="border" className="me-2" />
-            Uploading...
-          </Button>
-        ) : (
-          <Button variant="primary" type="submit">Upload</Button>
-        )}
+
+        <Form.Group className="mb-3">
+          <Form.Label>Status</Form.Label>
+          <Form.Select
+            value={status}
+            onChange={(e) => setStatus(e.target.value)}
+            required
+          >
+            <option value="PASS">PASS</option>
+            <option value="FAIL">FAIL</option>
+            <option value="SKIPPED">SKIPPED</option>
+          </Form.Select>
+        </Form.Group>
+
+        <Form.Group className="mb-3">
+          <Form.Label>Details</Form.Label>
+          <Form.Control
+            as="textarea"
+            rows={3}
+            value={details}
+            onChange={(e) => setDetails(e.target.value)}
+          />
+        </Form.Group>
+
+        <Form.Group controlId="formFile" className="mb-3">
+          <Form.Label>Test File</Form.Label>
+          <Form.Control
+            type="file"
+            onChange={(e) => setFile(e.target.files[0])}
+            required
+          />
+        </Form.Group>
+
+        <Button variant="primary" type="submit" disabled={uploading}>
+          {uploading ? (
+            <>
+              <Spinner size="sm" animation="border" className="me-2" />
+              Uploading...
+            </>
+          ) : (
+            "Upload Test"
+          )}
+        </Button>
       </Form>
+
       {message && <Alert variant="success" className="mt-3">{message}</Alert>}
       {error && <Alert variant="danger" className="mt-3">{error}</Alert>}
     </Container>
