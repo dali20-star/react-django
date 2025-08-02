@@ -1,17 +1,22 @@
 from rest_framework import serializers
-from django.contrib.auth.models import User
+from django.conf import settings
+from django.contrib.auth import get_user_model
 from .models import TestResult
 
+User = get_user_model()
+
 class UserSerializer(serializers.ModelSerializer):
+    full_name = serializers.ReadOnlyField()
+    
     class Meta:
         model = User
-        fields = ['id', 'username', 'first_name', 'last_name', 'email']
+        fields = ['id', 'username', 'first_name', 'last_name', 'email', 'full_name']
 
 class TestResultSerializer(serializers.ModelSerializer):
     file_url = serializers.SerializerMethodField()
     file_name = serializers.SerializerMethodField()
     uploaded_by = UserSerializer(read_only=True)
-    uploaded_by_id = serializers.IntegerField(write_only=True, required=True)
+    uploaded_by_id = serializers.IntegerField(write_only=True, required=False)
     
     class Meta:
         model = TestResult
@@ -44,10 +49,10 @@ class TestResultSerializer(serializers.ModelSerializer):
     
     def validate_status(self, value):
         """Validate status field"""
-        valid_statuses = ['PASS', 'FAIL', 'PENDING', 'SKIPPED']
-        if value not in valid_statuses:
+        valid_statuses = ['PASSED', 'FAILED', 'PENDING', 'SKIPPED', 'PASS', 'FAIL']
+        if value.upper() not in [s.upper() for s in valid_statuses]:
             raise serializers.ValidationError(f"Status must be one of {valid_statuses}")
-        return value
+        return value.upper()
     
     def validate_test_file(self, value):
         """Validate uploaded file"""

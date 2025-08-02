@@ -1,5 +1,5 @@
 from django.db import models
-from django.contrib.auth.models import User
+from django.conf import settings
 import os
 
 def test_file_upload_path(instance, filename):
@@ -20,7 +20,7 @@ class TestResult(models.Model):
         help_text="Upload test result file (logs, reports, etc.)"
     )
     uploaded_by = models.ForeignKey(
-        User,
+        settings.AUTH_USER_MODEL,
         on_delete=models.CASCADE,
         help_text="User who uploaded this test result"
     )
