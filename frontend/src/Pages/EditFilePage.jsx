@@ -9,6 +9,7 @@ function EditFilePage() {
   const navigate = useNavigate();
   const [fileName, setFileName] = useState("");
   const [message, setMessage] = useState("");
+  const [messageType, setMessageType] = useState("info");
 
   useEffect(() => {
     axios.get(`${config.API_URL}files/${id}/`)
@@ -19,11 +20,16 @@ function EditFilePage() {
   const handleSubmit = (e) => {
     e.preventDefault();
     axios.put(`${config.API_URL}files/${id}/`, { file_name: fileName })
-      .then(() => {
-        setMessage("File updated successfully.");
-        setTimeout(() => navigate("/files"), 1000);
-      })
-      .catch(() => setMessage("Update failed."));
+  .then(() => {
+    setMessage("File updated successfully.");
+    setMessageType("success"); // success → vert
+    setTimeout(() => navigate("/files"), 1000);
+  })
+  .catch(() => {
+    setMessage("Update failed.");
+    setMessageType("danger"); // danger → rouge
+  });
+
   };
 
   return (
@@ -40,7 +46,8 @@ function EditFilePage() {
         </Form.Group>
         <Button variant="primary" type="submit" className="w-100">Save</Button>
       </Form>
-      {message && <Alert variant="info" className="mt-3 text-center">{message}</Alert>}
+      {message && <Alert variant={messageType} className="mt-3 text-center">{message}</Alert>}
+
     </div>
   );
 }
