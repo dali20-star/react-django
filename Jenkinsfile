@@ -81,6 +81,12 @@ pipeline {
                 echo '🚀 Déploiement de l’application (à configurer selon ton infra : Docker Compose, K8s, SSH, etc.)'
             }
         }
+
+        stage('Run Ansible Playbook') {
+            steps {
+                bat 'wsl ansible-playbook /home/ahmed_pc/ansible-setup/full_setup.yml'
+            }
+        }
     }
 
     post {
