@@ -1,7 +1,6 @@
 import React, { useState } from "react";
-import axios from "axios";
+import api from "../utils/axiosConfig"; // Use configured axios instead
 import { Container, Form, Button, Alert, Spinner } from "react-bootstrap";
-import config from "../config";
 
 function FileUpload() {
   const [testName, setTestName] = useState("");
@@ -14,6 +13,14 @@ function FileUpload() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    
+    // Check if user is logged in
+    const token = localStorage.getItem('access');
+    if (!token) {
+      setError("Please login to upload files.");
+      return;
+    }
+
     if (!file || !testName || !status) {
       setError("All fields are required.");
       return;
@@ -24,15 +31,18 @@ function FileUpload() {
     formData.append("status", status);
     formData.append("details", details);
     formData.append("test_file", file);
-
-    // 🔐 Clé corrigée pour que le backend la reconnaisse
-    formData.append("uploaded_by_id", 1);
+    // Remove the hardcoded uploaded_by_id - backend will set it automatically
 
     try {
       setUploading(true);
-      await axios.post(`${config.API_URL}testresults/`, formData, {
-        headers: { "Content-Type": "multipart/form-data" },
+      setError("");
+      
+      await api.post('testresults/', formData, {
+        headers: { 
+          "Content-Type": "multipart/form-data"
+        },
       });
+      
       setMessage("Test uploaded successfully!");
       setTestName("");
       setStatus("PASS");
@@ -41,7 +51,12 @@ function FileUpload() {
       setError("");
     } catch (err) {
       console.error("Upload error:", err);
-      if (err.response?.data) {
+      if (err.response?.status === 401) {
+        setError("Authentication failed. Please login again.");
+        localStorage.removeItem('access');
+        localStorage.removeItem('refresh');
+        window.location.href = '/login';
+      } else if (err.response?.data) {
         setError(`Upload failed: ${JSON.stringify(err.response.data)}`);
       } else {
         setError("Upload failed. Please try again.");
@@ -64,7 +79,7 @@ function FileUpload() {
             required
           />
         </Form.Group>
-
+        
         <Form.Group className="mb-3">
           <Form.Label>Status</Form.Label>
           <Form.Select
@@ -77,7 +92,7 @@ function FileUpload() {
             <option value="SKIPPED">SKIPPED</option>
           </Form.Select>
         </Form.Group>
-
+        
         <Form.Group className="mb-3">
           <Form.Label>Details</Form.Label>
           <Form.Control
@@ -87,7 +102,7 @@ function FileUpload() {
             onChange={(e) => setDetails(e.target.value)}
           />
         </Form.Group>
-
+        
         <Form.Group controlId="formFile" className="mb-3">
           <Form.Label>Test File</Form.Label>
           <Form.Control
@@ -96,7 +111,7 @@ function FileUpload() {
             required
           />
         </Form.Group>
-
+        
         <Button variant="primary" type="submit" disabled={uploading}>
           {uploading ? (
             <>
@@ -108,7 +123,7 @@ function FileUpload() {
           )}
         </Button>
       </Form>
-
+      
       {message && <Alert variant="success" className="mt-3">{message}</Alert>}
       {error && <Alert variant="danger" className="mt-3">{error}</Alert>}
     </Container>
