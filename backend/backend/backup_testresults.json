@@ -1,0 +1,74 @@
+[
+{
+  "model": "testresults.testresult",
+  "pk": 1,
+  "fields": {
+    "test_name": "Sample Test",
+    "status": "PASS",
+    "executed_at": "2025-07-14T15:26:59.949Z",
+    "details": "This is a test result with the new simplified model",
+    "test_file": "",
+    "uploaded_by": null
+  }
+},
+{
+  "model": "testresults.testresult",
+  "pk": 2,
+  "fields": {
+    "test_name": "test11",
+    "status": "PASS",
+    "executed_at": "2025-07-14T15:38:39.906Z",
+    "details": "hello",
+    "test_file": "testresults/test_files/aaa.txt",
+    "uploaded_by": null
+  }
+},
+{
+  "model": "testresults.testresult",
+  "pk": 3,
+  "fields": {
+    "test_name": "test11",
+    "status": "PASS",
+    "executed_at": "2025-07-14T15:38:51.786Z",
+    "details": "hello",
+    "test_file": "testresults/test_files/aaa_yLUWUPp.txt",
+    "uploaded_by": null
+  }
+},
+{
+  "model": "testresults.testresult",
+  "pk": 4,
+  "fields": {
+    "test_name": "test11",
+    "status": "PASS",
+    "executed_at": "2025-07-14T16:03:45.512Z",
+    "details": "hello",
+    "test_file": "testresults/test_files/aaa_1IA6xX5.txt",
+    "uploaded_by": 1
+  }
+},
+{
+  "model": "testresults.testresult",
+  "pk": 5,
+  "fields": {
+    "test_name": "test11",
+    "status": "PASS",
+    "executed_at": "2025-07-14T16:04:19.186Z",
+    "details": "hello",
+    "test_file": "testresults/test_files/aaa_9wsZ0pf.txt",
+    "uploaded_by": null
+  }
+},
+{
+  "model": "testresults.testresult",
+  "pk": 6,
+  "fields": {
+    "test_name": "test11",
+    "status": "PASS",
+    "executed_at": "2025-07-14T16:07:18.767Z",
+    "details": "hello",
+    "test_file": "testresults/test_files/aaa_pD48Pcd.txt",
+    "uploaded_by": 1
+  }
+}
+]
