@@ -28,7 +28,7 @@ pipeline {
         stage('Run Tests') {
             steps {
                 dir('frontend') {
-                    bat 'npm test'
+                    bat 'npm test' // أو npm run test -- --watchAll=false
                 }
                 dir('backend') {
                     bat 'pytest'
@@ -118,9 +118,13 @@ pipeline {
     post {
         failure {
             echo '❌ Le pipeline a échoué.'
-            mail to: 'ahmedmasmoudi803@gmail.com',
-                 subject: "Build Failed: ${env.JOB_NAME} #${env.BUILD_NUMBER}",
-                 body: "Check Jenkins: ${env.BUILD_URL}"
+            mail to: 'your-email@example.com',
+                 subject: "❌ Build Failed: ${env.JOB_NAME} #${env.BUILD_NUMBER}",
+                 body: """
+Build failed in job: ${env.JOB_NAME}
+Build number: ${env.BUILD_NUMBER}
+Check details: ${env.BUILD_URL}
+"""
         }
         success {
             echo '✅ Pipeline exécuté avec succès !'
