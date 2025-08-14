@@ -27,32 +27,39 @@ pipeline {
 
         stage('Run Tests') {
             steps {
-                dir('frontend') {
-                    bat 'npm test' // أو npm run test -- --watchAll=false
-                }
-                dir('backend') {
-                    bat 'pytest'
+                catchError(buildResult: 'FAILURE', stageResult: 'FAILURE') {
+                    dir('frontend') {
+                        bat 'npm test -- --watchAll=false'
+                    }
+                    dir('backend') {
+                        bat 'pytest --maxfail=1 --disable-warnings'
+                    }
                 }
             }
         }
 
         stage('SonarQube Analysis') {
             steps {
-                withSonarQubeEnv('SonarQubeServer') {
-                    withCredentials([string(credentialsId: 'sonarqube-token', variable: 'SONAR_TOKEN')]) {
-                        bat """
-                            C:/ProgramData/Jenkins/.jenkins/tools/hudson.plugins.sonar.SonarRunnerInstallation/SonarScanner/bin/sonar-scanner.bat ^
-                            -Dsonar.projectKey=react-django ^
-                            -Dsonar.sources=frontend ^
-                            -Dsonar.host.url=http://localhost:9000 ^
-                            -Dsonar.token=%SONAR_TOKEN%
-                        """
+                catchError(buildResult: 'FAILURE', stageResult: 'FAILURE') {
+                    withSonarQubeEnv('SonarQubeServer') {
+                        withCredentials([string(credentialsId: 'sonarqube-token', variable: 'SONAR_TOKEN')]) {
+                            bat """
+                                C:/ProgramData/Jenkins/.jenkins/tools/hudson.plugins.sonar.SonarRunnerInstallation/SonarScanner/bin/sonar-scanner.bat ^
+                                -Dsonar.projectKey=react-django ^
+                                -Dsonar.sources=frontend ^
+                                -Dsonar.host.url=http://localhost:9000 ^
+                                -Dsonar.token=%SONAR_TOKEN%
+                            """
+                        }
                     }
                 }
             }
         }
 
         stage('Clean Docker') {
+            when {
+                expression { currentBuild.resultIsBetterOrEqualTo('SUCCESS') }
+            }
             steps {
                 bat '''
                     docker system prune -af --volumes
@@ -62,6 +69,9 @@ pipeline {
         }
 
         stage('Docker Login') {
+            when {
+                expression { currentBuild.resultIsBetterOrEqualTo('SUCCESS') }
+            }
             steps {
                 withCredentials([
                     usernamePassword(
@@ -78,6 +88,9 @@ pipeline {
         }
 
         stage('Build Docker Images') {
+            when {
+                expression { currentBuild.resultIsBetterOrEqualTo('SUCCESS') }
+            }
             steps {
                 bat """
                     echo Building Frontend...
@@ -90,6 +103,9 @@ pipeline {
         }
 
         stage('Push Docker Images') {
+            when {
+                expression { currentBuild.resultIsBetterOrEqualTo('SUCCESS') }
+            }
             steps {
                 bat """
                     docker push ahmedmasmoudi047/react-frontend:%IMAGE_TAG%
@@ -99,12 +115,18 @@ pipeline {
         }
 
         stage('Deploy Application') {
+            when {
+                expression { currentBuild.resultIsBetterOrEqualTo('SUCCESS') }
+            }
             steps {
                 echo '🚀 Déploiement de l’application'
             }
         }
 
         stage('Run Ansible Playbook') {
+            when {
+                expression { currentBuild.resultIsBetterOrEqualTo('SUCCESS') }
+            }
             steps {
                 bat """
                     wsl ansible-playbook /mnt/c/Users/AHMED_MASMOUDI/react-django/ansible-setup/deploy-react-django.yml ^
