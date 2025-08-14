@@ -2,8 +2,8 @@ pipeline {
     agent any
 
     environment {
-        DOCKER_BUILDKIT = '0' // Désactiver BuildKit pour compatibilité maximale
-        IMAGE_TAG = "v${new Date().format('yyyyMMddHHmmss')}" // Tag unique par build
+        DOCKER_BUILDKIT = '0'
+        IMAGE_TAG = "v${new Date().format('yyyyMMddHHmmss')}"
     }
 
     stages {
@@ -11,6 +11,28 @@ pipeline {
         stage('Clone Repository') {
             steps {
                 git branch: 'main', url: 'https://github.com/ahmed22-hub/react-django.git'
+            }
+        }
+
+        stage('Install Dependencies') {
+            steps {
+                dir('frontend') {
+                    bat 'npm install'
+                }
+                dir('backend') {
+                    bat 'pip install -r requirements.txt'
+                }
+            }
+        }
+
+        stage('Run Tests') {
+            steps {
+                dir('frontend') {
+                    bat 'npm test'
+                }
+                dir('backend') {
+                    bat 'pytest'
+                }
             }
         }
 
@@ -78,7 +100,7 @@ pipeline {
 
         stage('Deploy Application') {
             steps {
-                echo '🚀 Déploiement de l’application (à configurer selon ton infra : Docker Compose, K8s, SSH, etc.)'
+                echo '🚀 Déploiement de l’application'
             }
         }
 
@@ -96,6 +118,9 @@ pipeline {
     post {
         failure {
             echo '❌ Le pipeline a échoué.'
+            mail to: 'ahmedmasmoudi803@gmail.com',
+                 subject: "Build Failed: ${env.JOB_NAME} #${env.BUILD_NUMBER}",
+                 body: "Check Jenkins: ${env.BUILD_URL}"
         }
         success {
             echo '✅ Pipeline exécuté avec succès !'
