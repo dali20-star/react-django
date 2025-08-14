@@ -84,7 +84,11 @@ pipeline {
 
         stage('Run Ansible Playbook') {
             steps {
-                bat 'wsl ansible-playbook /home/ahmed_pc/ansible-setup/full_setup.yml'
+                bat """
+                    wsl ansible-playbook /mnt/c/Users/AHMED_MASMOUDI/react-django/ansible-setup/deploy-react-django.yml ^
+                    -i /mnt/c/Users/AHMED_MASMOUDI/react-django/ansible-setup/inventory.ini ^
+                    --extra-vars "image_tag=%IMAGE_TAG%"
+                """
             }
         }
     }
