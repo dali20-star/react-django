@@ -153,5 +153,4 @@ Build failed in job: ${env.JOB_NAME}
 Build number: ${env.BUILD_NUMBER}
 Check details: ${env.BUILD_URL}
 """
-        }
-      
+        
