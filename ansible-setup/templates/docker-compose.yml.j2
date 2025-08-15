@@ -1,0 +1,37 @@
+version: "3.9"
+
+services:
+  backend:
+    image: {{ be_image }}
+    container_name: react_django_backend
+    restart: unless-stopped
+    env_file:
+      - .env.backend  # optional; will be created if present
+    environment:
+{% for k, v in django_env_vars.items() %}
+      {{ k }}: "{{ v }}"
+{% endfor %}
+    ports:
+      - "{{ be_port }}:8000"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/healthz"]
+      interval: 10s
+      timeout: 3s
+      retries: 10
+      start_period: 10s
+
+  frontend:
+    image: {{ fe_image }}
+    container_name: react_frontend
+    restart: unless-stopped
+    depends_on:
+      backend:
+        condition: service_healthy
+    ports:
+      - "{{ fe_port }}:80"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost/"]
+      interval: 10s
+      timeout: 3s
+      retries: 10
+      start_period: 10s

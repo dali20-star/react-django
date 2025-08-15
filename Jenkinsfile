@@ -1,137 +1,141 @@
 pipeline {
     agent any
 
+    parameters {
+        choice(
+            name: 'DEPLOY_ENV',
+            choices: ['staging', 'production'],
+            description: 'Select the environment to deploy to'
+        )
+    }
+
+    options {
+        timestamps()
+        disableConcurrentBuilds()
+        timeout(time: 30, unit: 'MINUTES')
+    }
+
     environment {
-        DOCKER_BUILDKIT = '0'
+        DOCKER_BUILDKIT = '1'
+        COMPOSE_DOCKER_CLI_BUILD = '1'
         IMAGE_TAG = "v${new Date().format('yyyyMMddHHmmss')}"
+        SLACK_CHANNEL = '#deployments'
     }
 
     stages {
-
         stage('Clone Repository') {
             steps {
                 git branch: 'main', url: 'https://github.com/ahmed22-hub/react-django.git'
             }
         }
 
-        stage('Install Dependencies') {
-            steps {
+        stage('Install & Test in Parallel') {
+            parallel failFast: true, 
+            frontend: {
                 dir('frontend') {
-                    bat 'npm install'
-                }
-                dir('backend') {
-                    bat 'pip install -r requirements.txt'
-                }
-            }
-        }
-
-        stage('Run Tests') {
-            steps {
-                catchError(buildResult: 'FAILURE', stageResult: 'FAILURE') {
-                    dir('frontend') {
-                        bat 'npm test -- --watchAll=false'
+                    retry(2) {
+                        bat 'npm install'
+                        bat 'npm test'
                     }
-                    dir('backend') {
-                        bat 'pytest --maxfail=1 --disable-warnings'
+                }
+            },
+            backend: {
+                dir('backend') {
+                    retry(2) {
+                        bat 'pip install -r requirements.txt'
+                        bat 'pytest'
                     }
                 }
             }
         }
 
         stage('SonarQube Analysis') {
-            steps {
-                catchError(buildResult: 'FAILURE', stageResult: 'FAILURE') {
-                    withSonarQubeEnv('SonarQubeServer') {
-                        withCredentials([string(credentialsId: 'sonarqube-token', variable: 'SONAR_TOKEN')]) {
-                            bat """
-                                C:/ProgramData/Jenkins/.jenkins/tools/hudson.plugins.sonar.SonarRunnerInstallation/SonarScanner/bin/sonar-scanner.bat ^
-                                -Dsonar.projectKey=react-django ^
-                                -Dsonar.sources=frontend ^
-                                -Dsonar.host.url=http://localhost:9000 ^
-                                -Dsonar.token=%SONAR_TOKEN%
-                            """
-                        }
+            parallel failFast: true,
+            frontend: {
+                withSonarQubeEnv('SonarQubeServer') {
+                    withCredentials([string(credentialsId: 'sonarqube-token', variable: 'SONAR_TOKEN')]) {
+                        bat """
+                            sonar-scanner.bat ^
+                            -Dsonar.projectKey=react-frontend ^
+                            -Dsonar.sources=frontend ^
+                            -Dsonar.host.url=http://localhost:9000 ^
+                            -Dsonar.token=%SONAR_TOKEN%
+                        """
+                    }
+                }
+            },
+            backend: {
+                withSonarQubeEnv('SonarQubeServer') {
+                    withCredentials([string(credentialsId: 'sonarqube-token', variable: 'SONAR_TOKEN')]) {
+                        bat """
+                            sonar-scanner.bat ^
+                            -Dsonar.projectKey=django-backend ^
+                            -Dsonar.sources=backend ^
+                            -Dsonar.host.url=http://localhost:9000 ^
+                            -Dsonar.token=%SONAR_TOKEN%
+                        """
                     }
                 }
             }
         }
 
-        stage('Clean Docker') {
-            when {
-                expression { currentBuild.resultIsBetterOrEqualTo('SUCCESS') }
-            }
+        stage('Clean & Docker Login') {
             steps {
-                bat '''
-                    docker system prune -af --volumes
-                    docker logout
-                '''
-            }
-        }
-
-        stage('Docker Login') {
-            when {
-                expression { currentBuild.resultIsBetterOrEqualTo('SUCCESS') }
-            }
-            steps {
-                withCredentials([
-                    usernamePassword(
-                        credentialsId: 'dockerhub',
-                        usernameVariable: 'DOCKER_USERNAME',
-                        passwordVariable: 'DOCKER_PASSWORD'
-                    )
-                ]) {
-                    bat """
-                        echo %DOCKER_PASSWORD% | docker login -u %DOCKER_USERNAME% --password-stdin
-                    """
+                bat 'docker system prune -af --volumes'
+                withCredentials([usernamePassword(credentialsId: 'dockerhub', usernameVariable: 'DOCKER_USERNAME', passwordVariable: 'DOCKER_PASSWORD')]) {
+                    bat 'echo %DOCKER_PASSWORD% | docker login -u %DOCKER_USERNAME% --password-stdin'
                 }
             }
         }
 
-        stage('Build Docker Images') {
-            when {
-                expression { currentBuild.resultIsBetterOrEqualTo('SUCCESS') }
-            }
-            steps {
-                bat """
-                    echo Building Frontend...
-                    docker build --no-cache -f frontend/Dockerfile.frontend -t ahmedmasmoudi047/react-frontend:%IMAGE_TAG% ./frontend
-
-                    echo Building Backend...
-                    docker build --no-cache -f backend/Dockerfile.backend -t ahmedmasmoudi047/django-backend:%IMAGE_TAG% ./backend
-                """
+        stage('Docker Build in Parallel') {
+            parallel failFast: true,
+            frontend: {
+                bat "docker build --no-cache -f frontend/Dockerfile.frontend -t ahmedmasmoudi047/react-frontend:%IMAGE_TAG% ./frontend"
+            },
+            backend: {
+                bat "docker build --no-cache -f backend/Dockerfile.backend -t ahmedmasmoudi047/django-backend:%IMAGE_TAG% ./backend"
             }
         }
 
         stage('Push Docker Images') {
-            when {
-                expression { currentBuild.resultIsBetterOrEqualTo('SUCCESS') }
-            }
-            steps {
-                bat """
-                    docker push ahmedmasmoudi047/react-frontend:%IMAGE_TAG%
-                    docker push ahmedmasmoudi047/django-backend:%IMAGE_TAG%
-                """
+            parallel failFast: true,
+            frontend: {
+                bat "docker push ahmedmasmoudi047/react-frontend:%IMAGE_TAG%"
+            },
+            backend: {
+                bat "docker push ahmedmasmoudi047/django-backend:%IMAGE_TAG%"
             }
         }
 
-        stage('Deploy Application') {
-            when {
-                expression { currentBuild.resultIsBetterOrEqualTo('SUCCESS') }
-            }
+        stage('Tag Latest for Production') {
+            when { expression { params.DEPLOY_ENV == 'production' } }
             steps {
-                echo '🚀 Déploiement de l’application'
+                bat "docker tag ahmedmasmoudi047/react-frontend:%IMAGE_TAG% ahmedmasmoudi047/react-frontend:latest"
+                bat "docker tag ahmedmasmoudi047/django-backend:%IMAGE_TAG% ahmedmasmoudi047/django-backend:latest"
+                bat "docker push ahmedmasmoudi047/react-frontend:latest"
+                bat "docker push ahmedmasmoudi047/django-backend:latest"
             }
         }
 
-        stage('Run Ansible Playbook') {
-            when {
-                expression { currentBuild.resultIsBetterOrEqualTo('SUCCESS') }
+        stage('Approval for Production') {
+            when { expression { params.DEPLOY_ENV == 'production' } }
+            steps {
+                script {
+                    slackSend(channel: env.SLACK_CHANNEL, message: "🚨 Waiting for approval to deploy *PRODUCTION* - tag: ${IMAGE_TAG}")
+                    timeout(time: 10, unit: 'MINUTES') {
+                        input message: "🚨 Confirm deployment to PRODUCTION with tag: ${IMAGE_TAG}?"
+                    }
+                }
             }
+        }
+
+        stage('Run Ansible Deployment') {
             steps {
                 bat """
                     wsl ansible-playbook /mnt/c/Users/AHMED_MASMOUDI/react-django/ansible-setup/deploy-react-django.yml ^
                     -i /mnt/c/Users/AHMED_MASMOUDI/react-django/ansible-setup/inventory.ini ^
-                    --extra-vars "image_tag=%IMAGE_TAG%"
+                    --extra-vars "image_tag=%IMAGE_TAG% target_env=${params.DEPLOY_ENV}"
                 """
             }
         }
@@ -139,8 +143,10 @@ pipeline {
 
     post {
         failure {
-            echo '❌ Le pipeline a échoué.'
-            mail to: 'your-email@example.com',
+            script {
+                slackSend(channel: env.SLACK_CHANNEL, message: "❌ Deployment FAILED for ${params.DEPLOY_ENV} | Job: ${env.JOB_NAME} #${env.BUILD_NUMBER}")
+            }
+            mail to: 'ahmedmasmoudi803@gmail.com',
                  subject: "❌ Build Failed: ${env.JOB_NAME} #${env.BUILD_NUMBER}",
                  body: """
 Build failed in job: ${env.JOB_NAME}
@@ -149,7 +155,10 @@ Check details: ${env.BUILD_URL}
 """
         }
         success {
-            echo '✅ Pipeline exécuté avec succès !'
+            script {
+                slackSend(channel: env.SLACK_CHANNEL, message: "✅ Deployment SUCCESSFUL to ${params.DEPLOY_ENV} with tag ${IMAGE_TAG}")
+            }
+            echo "✅ Pipeline executed successfully!"
         }
     }
 }

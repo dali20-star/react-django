@@ -1,0 +1,57 @@
+---
+- name: Deploy React + Django Project
+  hosts: "{{ target_env }}"
+  become: true
+  vars:
+    image_tag: "{{ image_tag | default('latest') }}"
+    project_name: react-django
+    frontend_image: "ahmedmasmoudi047/react-frontend:{{ image_tag }}"
+    backend_image: "ahmedmasmoudi047/django-backend:{{ image_tag }}"
+
+  tasks:
+    - name: Ensure Docker is installed
+      apt:
+        name: docker.io
+        state: present
+        update_cache: yes
+
+    - name: Login to DockerHub
+      community.docker.docker_login:
+        username: "{{ docker_username }}"
+        password: "{{ docker_password }}"
+
+    - name: Pull latest frontend image
+      community.docker.docker_image:
+        name: "{{ frontend_image }}"
+        source: pull
+
+    - name: Pull latest backend image
+      community.docker.docker_image:
+        name: "{{ backend_image }}"
+        source: pull
+
+    - name: Stop old containers
+      community.docker.docker_container:
+        name: "{{ item }}"
+        state: absent
+      loop:
+        - frontend
+        - backend
+
+    - name: Start frontend container
+      community.docker.docker_container:
+        name: frontend
+        image: "{{ frontend_image }}"
+        state: started
+        restart_policy: always
+        published_ports:
+          - "80:80"
+
+    - name: Start backend container
+      community.docker.docker_container:
+        name: backend
+        image: "{{ backend_image }}"
+        state: started
+        restart_policy: always
+        published_ports:
+          - "8000:8000"
