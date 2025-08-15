@@ -153,4 +153,12 @@ Build failed in job: ${env.JOB_NAME}
 Build number: ${env.BUILD_NUMBER}
 Check details: ${env.BUILD_URL}
 """
-        
+        }
+        success {
+            script {
+                slackSend(channel: env.SLACK_CHANNEL, message: "✅ Deployment SUCCESSFUL to ${params.DEPLOY_ENV} with tag ${IMAGE_TAG}")
+            }
+            echo "✅ Pipeline executed successfully!"
+        }
+    }
+}
