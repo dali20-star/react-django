@@ -3,14 +3,19 @@ FROM python:3.11-slim
 
 WORKDIR /app
 
-# Installer les dépendances système nécessaires pour mysqlclient
+# Éviter les invites interactives
+ENV DEBIAN_FRONTEND=noninteractive
+
+# Installer les dépendances système nécessaires
 RUN apt-get update && apt-get install -y \
+    apt-transport-https \
+    ca-certificates \
     gcc \
     default-libmysqlclient-dev \
     pkg-config \
  && rm -rf /var/lib/apt/lists/*
 
-# Copier requirements et installer les packages Python
+# Copier requirements et installer les dépendances Python
 COPY requirements.txt .
 
 RUN pip install --upgrade pip && pip install -r requirements.txt
@@ -18,4 +23,5 @@ RUN pip install --upgrade pip && pip install -r requirements.txt
 # Copier le reste du code backend
 COPY . .
 
+# Lancer le serveur Django
 CMD ["python", "manage.py", "runserver", "0.0.0.0:8000"]
