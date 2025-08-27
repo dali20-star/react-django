@@ -162,3 +162,12 @@ Check details: ${env.BUILD_URL}
         }
     }
 }
+stage('Deploy to Kubernetes') {
+    steps {
+        sh '''
+        kubectl apply -f k8s/backend-deployment.yaml
+        kubectl apply -f k8s/frontend-deployment.yaml
+        '''
+    }
+}
+

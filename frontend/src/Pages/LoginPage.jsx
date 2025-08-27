@@ -1,8 +1,7 @@
 import React, { useState } from "react";
 import { Form, Button, Alert } from "react-bootstrap";
 import { useNavigate } from "react-router-dom";
-import config from "../config";
-import axios from "axios";
+import api from "../utils/axiosConfig"; // Use configured axios
 
 function LoginPage() {
   const [email, setEmail] = useState("");
@@ -13,12 +12,12 @@ function LoginPage() {
   const handleLogin = async (e) => {
     e.preventDefault();
     try {
-      const res = await axios.post(`${config.API_URL}token/`, { email, password });
+      const res = await api.post('auth/login/', { email, password });
       localStorage.setItem("access", res.data.access);
       localStorage.setItem("refresh", res.data.refresh);
       navigate("/");
-    } catch {
-      setError("Invalid credentials.");
+    } catch (error) {
+      setError(error.response?.data?.message || "Invalid credentials.");
     }
   };
 
@@ -31,6 +30,7 @@ function LoginPage() {
           <Form.Control
             type="email"
             required
+            value={email}
             onChange={(e) => setEmail(e.target.value)}
           />
         </Form.Group>
@@ -39,6 +39,7 @@ function LoginPage() {
           <Form.Control
             type="password"
             required
+            value={password}
             onChange={(e) => setPassword(e.target.value)}
           />
         </Form.Group>

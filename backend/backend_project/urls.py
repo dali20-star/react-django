@@ -6,9 +6,14 @@ from django.http import HttpResponse
 
 urlpatterns = [
     path('admin/', admin.site.urls),
+<<<<<<< HEAD
     path('api/', include('core.urls')),            # API routes
     path('', include('testresults.urls')),         # App de résultats
     path('', lambda request: HttpResponse("Hello from Django backend!")),  # Page d’accueil
+=======
+    path('api/auth/', include('accounts.urls')),
+    path('api/', include('testresults.urls')),
+>>>>>>> upstream/main
 ]
 
 if settings.DEBUG:
